@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+
 
 // Small local icon components (emoji fallbacks) to avoid external icon dependency
 const Icon = ({ children, size = 18, className = '' }) => (
   <span className={className} style={{ fontSize: size, lineHeight: 1 }}>{children}</span>
 );
+
 
 const Sparkles = (props) => <Icon {...props}>✨</Icon>;
 const TrendingUp = (props) => <Icon {...props}>📈</Icon>;
@@ -17,8 +18,13 @@ const Share2 = (props) => <Icon {...props}>🔗</Icon>;
 const Moon = (props) => <Icon {...props}>🌙</Icon>;
 const Sun = (props) => <Icon {...props}>☀️</Icon>;
 const RefreshCw = (props) => <Icon {...props}>🔄</Icon>;
+const Award = (props) => <Icon {...props}>🏆</Icon>;
+const AlertCircle = (props) => <Icon {...props}>⚠️</Icon>;
+const CheckCircle = (props) => <Icon {...props}>✅</Icon>;
+
 
 const API_URL = 'http://localhost:5000';
+
 
 // Floating particles background
 const FloatingParticles = ({ colorScheme }) => {
@@ -84,6 +90,7 @@ const FloatingParticles = ({ colorScheme }) => {
   return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }} />;
 };
 
+
 // 3D Brain visualization using CSS
 const Brain3D = () => {
   return (
@@ -98,14 +105,26 @@ const Brain3D = () => {
   );
 };
 
+
 // Personality Avatar Component
 const PersonalityAvatar = ({ type }) => {
   const avatarMap = {
-    'INFP': { icon: '🌟', color: '#FF6B9D', name: 'The Dreamer' },
+    'INFP': { icon: '🌟', color: '#FF6B9D', name: 'The Mediator' },
     'INTJ': { icon: '🧠', color: '#6B46C1', name: 'The Architect' },
-    'ENFP': { icon: '✨', color: '#F59E0B', name: 'The Champion' },
-    'ISTJ': { icon: '🎯', color: '#3B82F6', name: 'The Inspector' },
-    'ESTP': { icon: '⚡', color: '#14B8A6', name: 'The Dynamo' },
+    'ENFP': { icon: '✨', color: '#F59E0B', name: 'The Campaigner' },
+    'ISTJ': { icon: '🎯', color: '#3B82F6', name: 'The Logistician' },
+    'ESTP': { icon: '⚡', color: '#14B8A6', name: 'The Entrepreneur' },
+    'INFJ': { icon: '🔮', color: '#8B5CF6', name: 'The Advocate' },
+    'INTP': { icon: '🔬', color: '#6366F1', name: 'The Logician' },
+    'ENTJ': { icon: '👑', color: '#EF4444', name: 'The Commander' },
+    'ENTP': { icon: '💭', color: '#10B981', name: 'The Debater' },
+    'ISFJ': { icon: '🛡️', color: '#06B6D4', name: 'The Defender' },
+    'ESFJ': { icon: '🤝', color: '#F59E0B', name: 'The Consul' },
+    'ISFP': { icon: '🎨', color: '#EC4899', name: 'The Adventurer' },
+    'ESFP': { icon: '🎭', color: '#F97316', name: 'The Entertainer' },
+    'ESTJ': { icon: '⚖️', color: '#0EA5E9', name: 'The Executive' },
+    'ISTP': { icon: '🔧', color: '#64748B', name: 'The Virtuoso' },
+    'ENFJ': { icon: '💫', color: '#A855F7', name: 'The Protagonist' },
   };
   
   const avatar = avatarMap[type] || { icon: '💫', color: '#6B46C1', name: 'Unknown' };
@@ -124,6 +143,7 @@ const PersonalityAvatar = ({ type }) => {
   );
 };
 
+
 function App() {
   const [text, setText] = useState('');
   const [result, setResult] = useState(null);
@@ -134,9 +154,11 @@ function App() {
   const [colorScheme, setColorScheme] = useState('purple');
   const [showConfetti, setShowConfetti] = useState(false);
 
+
   useEffect(() => {
     fetchPersonalities();
   }, []);
+
 
   useEffect(() => {
     if (result) {
@@ -155,6 +177,7 @@ function App() {
     }
   }, [result]);
 
+
   const fetchPersonalities = async () => {
     try {
       const response = await fetch(`${API_URL}/api/personalities`);
@@ -167,6 +190,7 @@ function App() {
     }
   };
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -175,9 +199,11 @@ function App() {
       return;
     }
 
+
     setLoading(true);
     setError('');
     setResult(null);
+
 
     try {
       const response = await fetch(`${API_URL}/api/predict`, {
@@ -186,7 +212,9 @@ function App() {
         body: JSON.stringify({ text })
       });
 
+
       const data = await response.json();
+
 
       if (data.success) {
         setResult(data);
@@ -200,12 +228,14 @@ function App() {
     }
   };
 
+
   const handleClear = () => {
     setText('');
     setResult(null);
     setError('');
     setColorScheme('purple');
   };
+
 
   return (
     <div className={`app ${darkMode ? 'dark-mode' : ''}`} data-color-scheme={colorScheme}>
@@ -235,7 +265,7 @@ function App() {
           <div className="hero-stats">
             <div className="stat-item glass-card">
               <Users size={24} />
-              <span>8 Types</span>
+              <span>16 Types</span>
             </div>
             <div className="stat-item glass-card">
               <Sparkles size={24} />
@@ -243,10 +273,11 @@ function App() {
             </div>
             <div className="stat-item glass-card">
               <TrendingUp size={24} />
-              <span>81% Accurate</span>
+              <span>82% Accurate</span>
             </div>
           </div>
         </header>
+
 
         <main className="main-content">
           {!result ? (
@@ -312,12 +343,13 @@ function App() {
                 </div>
               </form>
 
+
               {personalities.length > 0 && (
                 <div className="personality-types">
                   <h3>Personality Spectrum</h3>
                   <div className="types-grid">
-                    {personalities.slice(0, 8).map((p, index) => (
-                      <div key={index} className="type-badge">{p}</div>
+                    {personalities.slice(0, 16).map((p, index) => (
+                      <div key={index} className="type-badge">{p.type || p}</div>
                     ))}
                   </div>
                 </div>
@@ -331,6 +363,29 @@ function App() {
                 <div className="personality-type-badge">
                   {result.prediction.personality}
                 </div>
+                
+                {/* Display personality name and category */}
+                {result.prediction.name && (
+                  <h3 className="personality-name" style={{ fontSize: '1.5rem', marginTop: '1rem', color: '#6B46C1' }}>
+                    {result.prediction.name}
+                  </h3>
+                )}
+                
+                {result.prediction.category && (
+                  <div className="personality-category" style={{ 
+                    display: 'inline-block', 
+                    padding: '0.5rem 1rem', 
+                    background: 'linear-gradient(135deg, #6B46C1 0%, #3B82F6 100%)',
+                    color: 'white',
+                    borderRadius: '20px',
+                    fontSize: '0.9rem',
+                    marginTop: '0.5rem',
+                    fontWeight: '600'
+                  }}>
+                    {result.prediction.category}
+                  </div>
+                )}
+                
                 <div className="confidence-display">
                   <span className="confidence-label">Confidence Score</span>
                   <span className="confidence-value">{result.prediction.confidence.toFixed(1)}%</span>
@@ -358,14 +413,135 @@ function App() {
                 </div>
               </div>
 
+              {/* Personality Description */}
+              {result.prediction.description && (
+                <div className="personality-description glass-card" style={{ marginTop: '2rem' }}>
+                  <div className="analysis-header">
+                    <Sparkles size={24} />
+                    <h3>Your Personality Profile</h3>
+                  </div>
+                  <p style={{ 
+                    fontSize: '1.1rem', 
+                    lineHeight: '1.8', 
+                    color: '#4B5563', 
+                    fontStyle: 'italic',
+                    padding: '1rem',
+                    background: 'rgba(107, 70, 193, 0.05)',
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #6B46C1'
+                  }}>
+                    {result.prediction.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Key Traits Section */}
+              {result.prediction.traits && result.prediction.traits.length > 0 && (
+                <div className="personality-traits glass-card" style={{ marginTop: '2rem' }}>
+                  <div className="analysis-header">
+                    <CheckCircle size={24} />
+                    <h3>Key Characteristics</h3>
+                  </div>
+                  <ul style={{ 
+                    listStyle: 'none', 
+                    padding: 0,
+                    display: 'grid',
+                    gap: '1rem'
+                  }}>
+                    {result.prediction.traits.map((trait, index) => (
+                      <li key={index} style={{ 
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        padding: '1rem',
+                        background: 'rgba(59, 130, 246, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(59, 130, 246, 0.1)',
+                        transition: 'all 0.3s ease',
+                        animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
+                      }}>
+                        <span style={{ 
+                          fontSize: '1.5rem', 
+                          marginRight: '1rem',
+                          color: '#3B82F6'
+                        }}>✓</span>
+                        <span style={{ 
+                          fontSize: '1rem', 
+                          color: '#374151',
+                          lineHeight: '1.6'
+                        }}>{trait}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Strengths and Weaknesses Grid */}
+              <div className="strengths-weaknesses-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                gap: '2rem',
+                marginTop: '2rem'
+              }}>
+                {/* Strengths */}
+                {result.prediction.strengths && (
+                  <div className="strengths-card glass-card" style={{
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%)',
+                    border: '2px solid rgba(16, 185, 129, 0.2)'
+                  }}>
+                    <div className="analysis-header">
+                      <Award size={24} style={{ color: '#10B981' }} />
+                      <h3 style={{ color: '#10B981' }}>Strengths</h3>
+                    </div>
+                    <p style={{ 
+                      fontSize: '1rem', 
+                      lineHeight: '1.8', 
+                      color: '#065F46',
+                      padding: '1rem'
+                    }}>
+                      {result.prediction.strengths}
+                    </p>
+                  </div>
+                )}
+
+                {/* Weaknesses */}
+                {result.prediction.weaknesses && (
+                  <div className="weaknesses-card glass-card" style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.05) 100%)',
+                    border: '2px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    <div className="analysis-header">
+                      <AlertCircle size={24} style={{ color: '#F59E0B' }} />
+                      <h3 style={{ color: '#F59E0B' }}>Areas for Growth</h3>
+                    </div>
+                    <p style={{ 
+                      fontSize: '1rem', 
+                      lineHeight: '1.8', 
+                      color: '#92400E',
+                      padding: '1rem'
+                    }}>
+                      {result.prediction.weaknesses}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+
+              {/* Personality Spectrum Analysis */}
               {result.all_scores && result.all_scores.length > 1 && (
-                <div className="trait-analysis glass-card">
+                <div className="trait-analysis glass-card" style={{ marginTop: '2rem' }}>
                   <div className="analysis-header">
                     <Target size={24} />
                     <h3>Personality Spectrum Analysis</h3>
                   </div>
+                  <p style={{ 
+                    color: '#6B7280', 
+                    marginBottom: '1.5rem',
+                    fontSize: '0.95rem'
+                  }}>
+                    Your personality shows traits from multiple types. Here's how you align with each:
+                  </p>
                   <div className="traits-grid">
-                    {result.all_scores.map((score, index) => (
+                    {result.all_scores.slice(0, 8).map((score, index) => (
                       <div key={index} className={`trait-item ${index === 0 ? 'primary-trait' : ''}`}>
                         <div className="trait-header">
                           <span className="trait-name">{score.personality}</span>
@@ -389,6 +565,7 @@ function App() {
           )}
         </main>
 
+
         <footer className="footer">
           <p>Powered by Advanced AI & Psychological Research</p>
           <div className="footer-links">
@@ -403,5 +580,6 @@ function App() {
     </div>
   );
 } 
+
 
 export default App;

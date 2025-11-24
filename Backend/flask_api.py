@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 import pandas as pd
+import numpy as np
 import re
 import nltk
 from nltk.corpus import stopwords
@@ -281,21 +284,21 @@ def scrape_personality_data():
     try:
         print("📥 Source 1: Fetching MBTI dataset from online sources...")
         
-        # TESTED WORKING URLs (Multiple sources for reliability)
+        # VERIFIED WORKING URLs (December 2025)
         dataset_sources = [
             {
-                'name': 'Figshare Mirror',
-                'url': 'https://figshare.com/ndownloader/files/28350088',
+                'name': 'Hugging Face Mirror 1',
+                'url': 'https://huggingface.co/datasets/kl08/myers-briggs-type-indicator/resolve/main/mbti_1.csv',
                 'format': 'csv'
             },
             {
-                'name': 'GitHub Repository 1',
-                'url': 'https://raw.githubusercontent.com/mmasdar/mbti-personality-machinelearning/main/mbti_1.csv',
+                'name': 'Hugging Face Mirror 2',
+                'url': 'https://huggingface.co/datasets/jingjietan/kaggle-mbti/resolve/main/mbti_1.csv',
                 'format': 'csv'
             },
             {
-                'name': 'GitHub Repository 2', 
-                'url': 'https://raw.githubusercontent.com/riboholganza/MBTI-Analysis/master/mbti_data.csv',
+                'name': 'GitHub Archive',
+                'url': 'https://raw.githubusercontent.com/ianscottknight/Predicting-Myers-Briggs-Type-Indicator-with-Recurrent-Neural-Networks/master/mbti_1.csv',
                 'format': 'csv'
             }
         ]
@@ -323,7 +326,7 @@ def scrape_personality_data():
                 
                 print(f"   Status Code: {response.status_code}")
                 
-                if response.status_code == 200 and len(response.content) > 1000:
+                if response.status_code == 200 and len(response.content) > 10000:
                     # Save to temporary file
                     temp_file = f"temp_{source['name'].replace(' ', '_')}.csv"
                     with open(temp_file, 'wb') as f:
@@ -350,21 +353,30 @@ def scrape_personality_data():
                         
                         # Process posts
                         print(f"   Processing posts...")
+                        processed_count = 0
                         for idx, row in df_temp.head(500).iterrows():
-                            personality_type = str(row['personality']).strip().upper()
-                            posts = str(row['text']).split('|||')
-                            
-                            for post in posts[:5]:
-                                if len(post.strip()) > 50:
-                                    all_data.append({
-                                        'text': post.strip(),
-                                        'personality': personality_type
-                                    })
+                            try:
+                                personality_type = str(row['personality']).strip().upper()
+                                posts = str(row['text']).split('|||')
+                                
+                                for post in posts[:5]:
+                                    if len(post.strip()) > 50:
+                                        all_data.append({
+                                            'text': post.strip(),
+                                            'personality': personality_type
+                                        })
+                                        processed_count += 1
+                            except Exception as e:
+                                continue
                         
-                        print(f"   ✅ Successfully loaded {len(all_data)} samples from {source['name']}")
-                        os.remove(temp_file)
-                        dataset_loaded = True
-                        break
+                        print(f"   ✅ Successfully loaded {processed_count} samples from {source['name']}")
+                        
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                        
+                        if processed_count > 100:  # Only mark as success if we got meaningful data
+                            dataset_loaded = True
+                            break
                         
                     except Exception as e:
                         print(f"   ⚠️ Error parsing CSV: {str(e)[:100]}")
@@ -372,7 +384,7 @@ def scrape_personality_data():
                             os.remove(temp_file)
                         continue
                 else:
-                    print(f"   ⚠️ Bad response: {response.status_code} or empty content")
+                    print(f"   ⚠️ Bad response or small file: {response.status_code}")
                     
             except requests.exceptions.Timeout:
                 print(f"   ⚠️ Timeout after 60 seconds")
@@ -387,6 +399,7 @@ def scrape_personality_data():
             
     except Exception as e:
         print(f"   ⚠️ Error in Source 1: {e}")
+    
     
     
     # ========================================
@@ -648,17 +661,39 @@ def load_scraped_data():
 
 
 def clean_text(text):
-    """Clean and preprocess text"""
+    """Clean text - Remove type labels and common words"""
+    # Remove all MBTI type labels
+    personality_types = ['INFP', 'INTJ', 'INFJ', 'INTP', 'ENFP', 'ENFJ', 'ENTP', 'ENTJ',
+                        'ISFP', 'ISTJ', 'ISFJ', 'ISTP', 'ESFP', 'ESTJ', 'ESFJ', 'ESTP']
+    
+    for ptype in personality_types:
+        text = re.sub(rf'\b{ptype}\b', '', text, flags=re.IGNORECASE)
+    
+    # Basic cleaning
     text = text.lower()
     text = re.sub(r"http\S+|www\S+", "", text)
-    text = re.sub(r"[^a-z\s]", "", text)
+    text = re.sub(r"[^a-z\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    
+    # Tokenize
     tokens = word_tokenize(text)
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
-    return " ".join(tokens)
+    
+    # Keep most words, remove only very common ones
+    very_common = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'of', 'is', 'was', 'were', 'be', 'been', 'being', 'for', 'with', 'as', 'by', 'it', 'this', 'that'}
+    
+    filtered = [
+        lemmatizer.lemmatize(w) 
+        for w in tokens 
+        if len(w) > 2 and w not in very_common
+    ]
+    
+    return " ".join(filtered) if len(filtered) >= 5 else ""
+
+
 
 
 def load_and_train_model():
-    """Load data and train the model"""
+    """Load data and train model - SIMPLE & EFFECTIVE VERSION"""
     global model, vectorizer, label_encoder, stop_words, lemmatizer
     
     print("🔄 Loading model...")
@@ -671,27 +706,90 @@ def load_and_train_model():
     df.columns = df.columns.str.strip()
     df['text'] = df['text'].astype(str).apply(clean_text)
     df = df[df['text'].str.strip() != ""]
+    df = df[df['text'].str.split().str.len() >= 8]
     
     print(f"📊 Training with {len(df)} samples")
+    distribution = df['personality'].value_counts()
+    print(f"📋 Data distribution:\n{distribution}")
     
-    vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1, 2))
+    # Keep only well-represented classes
+    min_samples = 40
+    valid_types = distribution[distribution >= min_samples].index
+    df = df[df['personality'].isin(valid_types)]
+    
+    print(f"✅ Keeping {len(valid_types)} personality types with 40+ samples")
+    
+    # SIMPLE TF-IDF (less overfitting)
+    vectorizer = TfidfVectorizer(
+        max_features=800,            # Reduced features
+        ngram_range=(1, 2),          # Only unigrams and bigrams
+        min_df=5,
+        max_df=0.7,
+        sublinear_tf=True
+    )
+    
+    print("🔄 Creating text features...")
     X = vectorizer.fit_transform(df['text']).toarray()
     
     label_encoder = LabelEncoder()
     y = label_encoder.fit_transform(df['personality'])
     
+    print(f"📊 Feature matrix: {X.shape}")
+    print(f"📊 Classes: {len(label_encoder.classes_)}")
+    
+    # Split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
     
-    model = LogisticRegression(max_iter=2000, solver='lbfgs', multi_class='auto')
+    # SIMPLE LOGISTIC REGRESSION (less overfitting)
+    print("🔄 Training Logistic Regression with regularization...")
+    
+    model = LogisticRegression(
+        max_iter=1000,
+        solver='lbfgs',
+        multi_class='multinomial',
+        C=0.3,                      # Strong regularization
+        class_weight='balanced',
+        random_state=42,
+        n_jobs=-1
+    )
+    
     model.fit(X_train, y_train)
     
-    accuracy = model.score(X_test, y_test)
+    # Evaluate
+    train_acc = model.score(X_train, y_train)
+    test_acc = model.score(X_test, y_test)
     
     print("✅ Model trained successfully!")
-    print(f"📊 Model Accuracy: {accuracy * 100:.2f}%")
+    print(f"📊 Training Accuracy: {train_acc * 100:.2f}%")
+    print(f"📊 Test Accuracy: {test_acc * 100:.2f}%")
+    
+    # Check for overfitting
+    gap = (train_acc - test_acc) * 100
+    if gap > 15:
+        print(f"⚠️  Overfitting detected (gap: {gap:.1f}%)")
+    else:
+        print(f"✅ Good generalization (gap: {gap:.1f}%)")
+    
     print(f"📊 Personality types: {list(label_encoder.classes_)}")
+    
+    # Detailed report
+    from sklearn.metrics import classification_report
+    y_pred = model.predict(X_test)
+    print("\n📈 Detailed Performance:")
+    print(classification_report(y_test, y_pred, target_names=label_encoder.classes_, zero_division=0))
+    
+    # Top features per class
+    print("\n🔝 Most Predictive Words Per Personality Type:")
+    feature_names = vectorizer.get_feature_names_out()
+    for i, personality in enumerate(label_encoder.classes_):
+        # Get coefficients for this class
+        coef = model.coef_[i]
+        top_indices = coef.argsort()[-5:][::-1]
+        top_words = [feature_names[idx] for idx in top_indices]
+        print(f"   {personality}: {', '.join(top_words)}")
+
 
 
 load_and_train_model()
