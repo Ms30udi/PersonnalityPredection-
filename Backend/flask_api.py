@@ -934,22 +934,33 @@ def home():
 def predict_personality():
     try:
         data = request.get_json()
-        text = data.get('text', '')
         
-        if not text or len(text.strip()) < 50:
+        # Debug logging
+        print(f"📥 Received request: {data}")
+        
+        text = data.get('text', '') if data else ''
+        
+        print(f"📝 Text length: {len(text)} characters")
+        
+        # More lenient validation - accept 30+ chars instead of 50
+        if not text or len(text.strip()) < 30:
+            print(f"❌ Text too short: {len(text.strip())} chars")
             return jsonify({
                 'success': False,
-                'error': 'Please provide at least 50 characters of text'
+                'error': f'Please provide at least 30 characters of text (you provided {len(text.strip())})'
             }), 400
         
         cleaned_text = clean_text(text)
+        print(f"🧹 Cleaned text: '{cleaned_text[:100]}...' ({len(cleaned_text)} chars)")
         
-        if not cleaned_text:
+        if not cleaned_text or len(cleaned_text.split()) < 3:
+            print(f"❌ Text too short after cleaning")
             return jsonify({
                 'success': False,
-                'error': 'Text too short after processing. Please write more.'
+                'error': 'Text too short after processing. Please write more descriptive text with meaningful words.'
             }), 400
         
+        # Prediction
         X = vectorizer.transform([cleaned_text]).toarray()
         prediction = model.predict(X)[0]
         probabilities = model.predict_proba(X)[0]
@@ -957,7 +968,9 @@ def predict_personality():
         predicted_temperament = label_encoder.inverse_transform([prediction])[0]
         confidence = float(probabilities[prediction] * 100)
         
-        # Map temperament back to likely MBTI types
+        print(f"✅ Prediction: {predicted_temperament} ({confidence:.1f}%)")
+        
+        # Map temperament back to MBTI types
         temperament_to_types = {
             'NT_Analyst': ['INTJ', 'INTP', 'ENTJ', 'ENTP'],
             'NF_Diplomat': ['INFJ', 'INFP', 'ENFJ', 'ENFP'],
@@ -968,7 +981,7 @@ def predict_personality():
         likely_types = temperament_to_types.get(predicted_temperament, [])
         most_likely = likely_types[0] if likely_types else 'INTJ'
         
-        # Get all probabilities
+        # Get all temperament scores
         all_scores = []
         for i, prob in enumerate(probabilities):
             temperament = label_encoder.inverse_transform([i])[0]
@@ -982,8 +995,8 @@ def predict_personality():
             'success': True,
             'prediction': {
                 'temperament': predicted_temperament,
-                'personality': most_likely,  # Most likely specific type
-                'likely_types': likely_types,  # All types in this temperament
+                'personality': most_likely,
+                'likely_types': likely_types,
                 'name': PERSONALITY_DESCRIPTIONS.get(most_likely, {}).get('name', 'Unknown'),
                 'category': PERSONALITY_DESCRIPTIONS.get(most_likely, {}).get('category', 'Unknown'),
                 'description': PERSONALITY_DESCRIPTIONS.get(most_likely, {}).get('description', ''),
@@ -992,14 +1005,18 @@ def predict_personality():
                 'weaknesses': PERSONALITY_DESCRIPTIONS.get(most_likely, {}).get('weaknesses', ''),
                 'confidence': confidence
             },
-            'all_scores': all_scores[:4]  # Top 4 temperaments
+            'all_scores': all_scores
         })
         
     except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': f'Prediction failed: {str(e)}'
         }), 500
+
 
 
 @app.route('/api/personalities', methods=['GET'])
